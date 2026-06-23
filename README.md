@@ -36,20 +36,29 @@ This repository contains the full architecture design, configuration blueprints,
 # BFD Configuration
 /routing bfd configuration add interfaces=ether1 min-rx=100ms min-tx=100ms multiplier=3
 /routing bfd configuration add interfaces=ether2 min-rx=100ms min-tx=100ms multiplier=3
-3. Leaf-02 DHCP Relay SetupTo allow clients sitting behind Leaf-02 to pull dynamic configurations across the routed core from the centralized server behind Leaf-01, a standard DHCP relay is bound to the client interface:  Code snippet/interface bridge add name=bridge1
+3. Leaf-02 DHCP Relay SetupTo allow clients sitting behind Leaf-02 to pull dynamic configurations across the routed core from the centralized server behind Leaf-01, a standard DHCP relay is bound to the client interface:  
+
+Code snippet
+/interface bridge add name=bridge1
 /interface bridge port add interface=ether8 bridge=bridge1
 /ip address add address=192.168.1.254/24 interface=bridge1
-
 /ip dhcp-relay add name=relay1 interface=bridge1 dhcp-server=172.16.0.1 local-address=192.168.1.254 disabled=no
+
 📊 Operational Verification & Convergence TestingRun these troubleshooting commands in the RouterOS terminal to ensure the fabric is healthy:1. Active OSPF AdjacenciesVerify that all links have established a Full state connection:  Code snippet/routing ospf neighbor print
+
 Expected Output:PlaintextFlags: D - DYNAMIC
 0 D instance=ospf1 area=backbone interface=ether1 address=10.0.0.5 router-id=3.3.3.3 state=Full
 1 D instance=ospf1 area=backbone interface=ether2 address=10.0.0.7 router-id=4.4.4.4 state=Full
+
 2. Active BFD SessionsEnsure that the low-overhead hardware-tracked keepalives are actively up:  Code snippet/routing bfd session print
 Expected Output:PlaintextFlags: U - UP
 0 U multihop=no vrf=main remote-address=10.0.0.2%ether1 state=up actual-tx-interval=100ms hold-time=300ms
 1 U multihop=no vrf=main remote-address=10.0.0.6%ether2 state=up actual-tx-interval=100ms hold-time=300ms
+
 3. Routing Paths & Active ECMP Multi-PathingConfirm that your traffic load-balances over both Spine choices simultaneously via the routing matrix (+ flag indicates active ECMP):  Code snippet/ip route print
-Expected Output Snippet:PlaintextDAo+ 172.16.0.254/32  10.0.0.2%ether1  main 110
+
+Expected Output Snippet Plaintext
+DAo+ 172.16.0.254/32  10.0.0.2%ether1  main 110
 DAo+ 172.16.0.254/32  10.0.0.6%ether2  main 110
+
 📉 Empirical Convergence BenchmarksDuring a physical link interruption stress test (monitored via a continuous 100ms ping run alongside Wireshark capture traces), the fabric achieved the following failover markers:Default OSPF (No BFD): ~40 Seconds OSPF Aggressive Timers (No BFD): ~3 Seconds OSPF + BFD (This Lab Design): 109 Milliseconds (Only 1 single packet dropped before full alternate-path restabilization).🧠 Key Architecture TakeawaysDevice Optimization Choice: Initial deployment concepts using physical edge switches (like the MikroTik CRS328) were rejected because RouterOS switch packages omit full sub-second BFD engine features. Simulating with MikroTik CHR instances successfully brings full core-routing architecture advantages directly down to small LAN environments.  Horizontal Scaling Paths: Scaling out aggregate network capacity in a 2-stage Clos structure simply requires dropping in an additional Spine node; scaling port access is completed by attaching another standalone Leaf.
