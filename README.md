@@ -129,6 +129,10 @@ DAo+ 172.16.0.254/32  10.0.0.6%ether2  main 110
 
 ---
 
+### Diagram of the Topology
+
+![Network Topology Diagram](topology.png)
+
 ## Key Architecture Takeaways
 1. Device Optimization Choice: Initial deployment concepts using physical edge switches (like the MikroTik CRS328) were rejected because RouterOS switch packages omit full sub-second BFD engine features. Simulating with MikroTik CHR instances successfully brings full core-routing architecture advantages directly down to small LAN environments.
 2. Horizontal Scaling Paths: Scaling out aggregate network capacity in a 2-stage Clos structure simply requires dropping in an additional Spine node; scaling port access is completed by attaching another standalone Leaf.
